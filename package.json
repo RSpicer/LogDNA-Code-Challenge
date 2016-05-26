@@ -1,0 +1,22 @@
+{
+  "name": "logdna-code-challenge",
+  "version": "1.0.0",
+  "description": "A quick code challenge for the people at LogDNA.",
+  "main": "searchParse.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RSpicer/LogDNA-Code-Challenge.git"
+  },
+  "author": "Ryan Spicer",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RSpicer/LogDNA-Code-Challenge/issues"
+  },
+  "homepage": "https://github.com/RSpicer/LogDNA-Code-Challenge#readme",
+  "dependencies": {
+    "express": "^4.13.4"
+  }
+}
