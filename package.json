@@ -1,8 +1,8 @@
 {
   "name": "logdna-code-challenge",
   "version": "1.0.0",
-  "description": "A quick code challenge for the people at LogDNA.",
-  "main": "searchParse.js",
+  "description": "A quick code challenge for the nice people at LogDNA.",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/RSpicer/LogDNA-Code-Challenge#readme",
   "dependencies": {
-    "express": "^4.13.4"
+    "express": "^4.13.4",
+    "lodash": "^4.13.1"
   }
 }
