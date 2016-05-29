@@ -6,13 +6,14 @@ function mainHandler (text) {
 	if (textArr.length === 0) {
 		return undefined;
 	} else if (textArr.length === 1) {
-		//parse
+		return parseArr({values: textArr, isOR: false})
 	} else {
 		filteredObj = filterOperators(textArr);
 		return parseArr(filteredObj);
 	}	
 }
 
+//Filter ORs and ANDs out of an array of words; then, return an Obj denoting whether it was an OR or AND operation.
 function filterOperators (textArr) {
 	var filteredArray,
 		filteredObj = {};
@@ -27,7 +28,6 @@ function filterOperators (textArr) {
 		return false;
 	}
 
-	//If an OR operation, remove ORs and return filteredArray and true. Else, do the same for AND, and fales.
 	if (_checkOperators(textArr) === true) {
 		filteredArray = textArr.filter(function(value){
 			return !(value === "OR");
@@ -50,83 +50,78 @@ function parseArr (filteredObj) {
 		filteredArr = filteredObj.values,
 		//RegEXP to test if the given value is in parens
 		inParens = /(\([^(]+\))/g,
+		//RegEXP to break out words in parens
+		filterWords = /([^\(\)"\s]+)/g
 		//RegEXP to parse out operators.
-		parseOperators = /([!<>=]{1,2})/g,
-		//RegEXP to test if len(x)
-		isLen = /(len\(\d+\))/g;
+		parseOperators = /([!<>=]{1,2})/g
 
+	//If OR operation...
 	if (filteredObj.isOR === true) {
 		finalObj["$or"] = [];
 		for (var i = 0; i < filteredArr.length; i++) {
+			//Test if an operation inside parens
 			var testParens = filteredArr[i].match(inParens);
 			if (testParens) {
-				//Filter out ORs and ANDs, as before
-				var tempObj = filterOperators(testParens),
+				//Filter out ORs and ANDs from inside the parens
+				var tempObj = filterOperators(testParens[0].match(filterWords)),
 					tempArr = tempObj.values;
+
+				//If OR operation inside parens...
 				if (tempObj.isOR === true) {
 					finalObj["$or"].push({"$or": []});
 					for (var x = 0; x < tempArr.length; x++) {
-						var operators = tempArr[x].match(parseOperators),
-							testLen = tempArr[x].match(isLen);
-						if(testLen) {
-							var lenDigits = testLen[0].substring(4, tempArr[x].length - 1)
-							tempArr[x] = {"$len": lenDigits}
-						}
+						//Test if operators (!=<>) for each individual search term
+						var operators = tempArr[x].match(parseOperators);
 
 						if (operators) {
 							if (operators[0] === "!") {
-								finalObj["$or"]["$or"].push({"$not": tempArr[x].substring(1, tempArr[x].length)});
+								finalObj["$or"][i]["$or"].push({"$not": tempArr[x].substring(1, tempArr[x].length)});
 							} else if (operators[0] === ">") {
-								finalObj["$or"]["$or"].push({"$gt": tempArr[x].substring(1, tempArr[x].length)});
+								finalObj["$or"][i]["$or"].push({"$gt": tempArr[x].substring(1, tempArr[x].length)});
 							} else if (operators[0] === "<") {
-								finalObj["$or"]["$or"].push({"$lt": tempArr[x].substring(1, tempArr[x].length)});
+								finalObj["$or"][i]["$or"].push({"$lt": tempArr[x].substring(1, tempArr[x].length)});
 							} else if (operators[0] === "=") {
-								finalObj["$or"]["$or"].push({"$eq": tempArr[x].substring(1, tempArr[x].length)});
+								finalObj["$or"][i]["$or"].push({"$eq": tempArr[x].substring(1, tempArr[x].length)});
 							} else if (operators[0] === ">=") {
-								finalObj["$or"]["$or"].push({"$gte": tempArr[x].substring(2, tempArr[x].length)});
+								finalObj["$or"][i]["$or"].push({"$gte": tempArr[x].substring(2, tempArr[x].length)});
 							} else if (operators[0] === "=<") {
-								finalObj["$or"]["$or"].push({"$lte": tempArr[x].substring(2, tempArr[x].length)});
+								finalObj["$or"][i]["$or"].push({"$lte": tempArr[x].substring(2, tempArr[x].length)});
 							} else {
 								//ERROR
 							}
 						} else {
-							finalObj["$or"]["$or"].push(tempArr[x]);
+							//If no operators...
+							finalObj["$or"][i]["$or"].push(tempArr[x]);
 						}
 					}
 				} else {
 					finalObj["$or"].push({"$and": []});
 					for (var x = 0; x < tempArr.length; x++) {
-						var operators = tempArr[x].match(parseOperators),
-							testLen = tempArr[x].match(isLen);
-						if(testLen) {
-							var lenDigits = testLen[0].substring(4, tempArr[x].length - 1)
-							tempArr[x] = {"$len": lenDigits}
-						}
+						var operators = tempArr[x].match(parseOperators);
 
-						if (operators.length > 0) {
+						if (operators) {
 							if (operators[0] === "!") {
-								finalObj["$or"]["$and"].push({"$not": tempArr[x].substring(1, tempArr[x].length)});
+								finalObj["$or"][i]["$and"].push({"$not": tempArr[x].substring(1, tempArr[x].length)});
 							} else if (operators[0] === ">") {
-								finalObj["$or"]["$and"].push({"$gt": tempArr[x].substring(1, tempArr[x].length)});
+								finalObj["$or"][i]["$and"].push({"$gt": tempArr[x].substring(1, tempArr[x].length)});
 							} else if (operators[0] === "<") {
-								finalObj["$or"]["$and"].push({"$lt": tempArr[x].substring(1, tempArr[x].length)});
+								finalObj["$or"][i]["$and"].push({"$lt": tempArr[x].substring(1, tempArr[x].length)});
 							} else if (operators[0] === "=") {
-								finalObj["$or"]["$and"].push({"$eq": tempArr[x].substring(1, tempArr[x].length)});
+								finalObj["$or"][i]["$and"].push({"$eq": tempArr[x].substring(1, tempArr[x].length)});
 							} else if (operators[0] === ">=") {
-								finalObj["$or"]["$and"].push({"$gte": tempArr[x].substring(2, tempArr[x].length)});
+								finalObj["$or"][i]["$and"].push({"$gte": tempArr[x].substring(2, tempArr[x].length)});
 							} else if (operators[0] === "=<") {
-								finalObj["$or"]["$and"].push({"$lte": tempArr[x].substring(2, tempArr[x].length)});
+								finalObj["$or"][i]["$and"].push({"$lte": tempArr[x].substring(2, tempArr[x].length)});
 							} else {
 								//ERROR
 							}
 						} else {
-							finalObj["$or"]["$and"].push(tempArr[x]);
+							finalObj["$or"][i]["$and"].push(tempArr[x]);
 						}
 					}
 				}
 			} else {
-				var operators = filteredArr[i].match(parseOperators),
-					testLen = filteredArr[i].match(isLen);
+				var operators = filteredArr[i].match(parseOperators);
 
 				if (operators) {
 					if (operators[0] === "!") {
@@ -155,66 +150,56 @@ function parseArr (filteredObj) {
 			var testParens = filteredArr[i].match(inParens);
 			if (testParens) {
 				//Filter out ORs and ANDs, as before
-				var tempObj = filterOperators(testParens),
+				var tempObj = filterOperators(testParens[0].match(filterWords)),
 					tempArr = tempObj.values;
 				if (tempObj.isOR === true) {
 					finalObj["$and"].push({"$or": []});
 					for (var x = 0; x < tempArr.length; x++) {
-						var operators = tempArr[x].match(parseOperators),
-							testLen = tempArr[x].match(isLen);
-						if(testLen) {
-							var lenDigits = testLen[0].substring(4, tempArr[x].length - 1)
-							tempArr[x] = {"$len": lenDigits}
-						}
+						var operators = tempArr[x].match(parseOperators);
 
 						if (operators) {
 							if (operators[0] === "!") {
-								finalObj["$and"]["$or"].push({"$not": tempArr[x].substring(1, tempArr[x].length)});
+								finalObj["$and"][i]["$or"].push({"$not": tempArr[x].substring(1, tempArr[x].length)});
 							} else if (operators[0] === ">") {
-								finalObj["$and"]["$or"].push({"$gt": tempArr[x].substring(1, tempArr[x].length)});
+								finalObj["$and"][i]["$or"].push({"$gt": tempArr[x].substring(1, tempArr[x].length)});
 							} else if (operators[0] === "<") {
-								finalObj["$and"]["$or"].push({"$lt": tempArr[x].substring(1, tempArr[x].length)});
+								finalObj["$and"][i]["$or"].push({"$lt": tempArr[x].substring(1, tempArr[x].length)});
 							} else if (operators[0] === "=") {
-								finalObj["$and"]["$or"].push({"$eq": tempArr[x].substring(1, tempArr[x].length)});
+								finalObj["$and"][i]["$or"].push({"$eq": tempArr[x].substring(1, tempArr[x].length)});
 							} else if (operators[0] === ">=") {
-								finalObj["$and"]["$or"].push({"$gte": tempArr[x].substring(2, tempArr[x].length)});
+								finalObj["$and"][i]["$or"].push({"$gte": tempArr[x].substring(2, tempArr[x].length)});
 							} else if (operators[0] === "=<") {
-								finalObj["$and"]["$or"].push({"$lte": tempArr[x].substring(2, tempArr[x].length)});
+								finalObj["$and"][i]["$or"].push({"$lte": tempArr[x].substring(2, tempArr[x].length)});
 							} else {
 								//ERROR
 							}
 						} else {
-							finalObj["$and"]["$or"].push(tempArr[x]);
+							finalObj["$and"][i]["$or"].push(tempArr[x]);
 						}
 					}
 				} else {
 					finalObj["$and"].push({"$and": []});
 					for (var x = 0; x < tempArr.length; x++) {
-						var operators = tempArr[x].match(parseOperators),
-							testLen = tempArr[x].match(isLen);
-						if(testLen) {
-							var lenDigits = testLen[0].substring(4, tempArr[x].length - 1)
-							tempArr[x] = {"$len": lenDigits}
-						}
+						var operators = tempArr[x].match(parseOperators)
 
 						if (operators) {
 							if (operators[0] === "!") {
-								finalObj["$and"]["$and"].push({"$not": tempArr[x].substring(1, tempArr[x].length)});
+								finalObj["$and"][i]["$and"].push({"$not": tempArr[x].substring(1, tempArr[x].length)});
 							} else if (operators[0] === ">") {
-								finalObj["$and"]["$and"].push({"$gt": tempArr[x].substring(1, tempArr[x].length)});
+								finalObj["$and"][i]["$and"].push({"$gt": tempArr[x].substring(1, tempArr[x].length)});
 							} else if (operators[0] === "<") {
-								finalObj["$and"]["$and"].push({"$lt": tempArr[x].substring(1, tempArr[x].length)});
+								finalObj["$and"][i]["$and"].push({"$lt": tempArr[x].substring(1, tempArr[x].length)});
 							} else if (operators[0] === "=") {
-								finalObj["$and"]["$and"].push({"$eq": tempArr[x].substring(1, tempArr[x].length)});
+								finalObj["$and"][i]["$and"].push({"$eq": tempArr[x].substring(1, tempArr[x].length)});
 							} else if (operators[0] === ">=") {
-								finalObj["$and"]["$and"].push({"$gte": tempArr[x].substring(2, tempArr[x].length)});
+								finalObj["$and"][i]["$and"].push({"$gte": tempArr[x].substring(2, tempArr[x].length)});
 							} else if (operators[0] === "=<") {
-								finalObj["$and"]["$and"].push({"$lte": tempArr[x].substring(2, tempArr[x].length)});
+								finalObj["$and"][i]["$and"].push({"$lte": tempArr[x].substring(2, tempArr[x].length)});
 							} else {
 								//ERROR
 							}
 						} else {
-							finalObj["$and"]["$and"].push(tempArr[x]);
+							finalObj["$and"][i]["$and"].push(tempArr[x]);
 						}
 					}
 				}
@@ -247,4 +232,4 @@ function parseArr (filteredObj) {
 	return finalObj;
 }
 
-console.error(mainHandler("(error OR info) AND (lol OR lel)"));
+module.exports = {mainHandler: mainHandler, filterOperators: filterOperators, parseArr: parseArr};
